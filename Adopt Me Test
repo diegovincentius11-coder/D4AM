@@ -1,0 +1,272 @@
+--// =========================
+--// CONFIG
+--// =========================
+
+local AUTO_CHAT_DELAY = 15
+local REQUIRED_VALUE = 5
+local MAX_PETS = 2
+
+local CHAT_MESSAGE = "🐾🌈TRADING LITTLEST PET SHOP HOUSE!! REALLY CUTE WITH GRINDING AREA!! LF 5+ VALS!! GO TO MAGIC DOOR TO SEE!!!"
+
+--// =========================
+--// VALUE DATABASE
+--// Update manual sesuai website
+--// =========================
+
+local PetValues = {
+    ["Sea Turtle"] = {
+        normal = 0,2,
+        neon = 3,
+        mega = 6
+    },
+
+    ["Frost Dragon"] = {
+        normal = 90,
+        neon = 360,
+        mega = 1440
+    },
+
+    ["Cow"] = {
+        normal = 5,
+        neon = 20,
+        mega = 80
+    },
+
+    ["Turtle"] = {
+        normal = 10,
+        neon = 40,
+        mega = 160
+    },
+
+    ["Kangaroo"] = {
+        normal = 5,
+        neon = 20,
+        mega = 80
+    }
+}
+
+--// =========================
+--// SERVICES
+--// =========================
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+
+local LocalPlayer = Players.LocalPlayer
+
+--// =========================
+--// AUTO CHAT LOOP
+--// =========================
+
+spawn(function()
+    while true do
+        pcall(function()
+            ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(
+                CHAT_MESSAGE,
+                "All"
+            )
+        end)
+
+        task.wait(AUTO_CHAT_DELAY)
+    end
+end)
+
+--// =========================
+--// MAGIC DOOR PLACE
+--// =========================
+
+local function PlaceMagicDoor()
+    pcall(function()
+
+        local backpack = LocalPlayer:WaitForChild("Backpack")
+
+        for _,tool in pairs(backpack:GetChildren()) do
+            if string.find(tool.Name:lower(), "magic door") then
+
+                LocalPlayer.Character.Humanoid:EquipTool(tool)
+
+                task.wait(1)
+
+                tool:Activate()
+
+                print("Magic Door dipasang")
+            end
+        end
+    end)
+end
+
+PlaceMagicDoor()
+
+--// =========================
+--// DETECT PET TYPE
+--// =========================
+
+local function GetPetType(petData)
+
+    local isNeon = false
+    local isMega = false
+
+    if petData.properties then
+
+        if petData.properties.neon then
+            isNeon = true
+        end
+
+        if petData.properties.mega_neon then
+            isMega = true
+        end
+    end
+
+    if isMega then
+        return "mega"
+    elseif isNeon then
+        return "neon"
+    else
+        return "normal"
+    end
+end
+
+--// =========================
+--// GET PET VALUE
+--// =========================
+
+local function GetPetValue(petName, petType)
+
+    if PetValues[petName] then
+
+        return PetValues[petName][petType] or 0
+    end
+
+    return 0
+end
+
+--// =========================
+--// CALCULATE TOTAL VALUE
+--// =========================
+
+local function CalculateTradeValue(items)
+
+    local total = 0
+    local count = 0
+
+    for _,petData in pairs(items) do
+
+        count += 1
+
+        local petName = petData.kind
+
+        local petType = GetPetType(petData)
+
+        local value = GetPetValue(petName, petType)
+
+        total += value
+
+        print("PET:", petName, petType, value)
+    end
+
+    return total, count
+end
+
+--// =========================
+--// TRADE SYSTEM
+--// =========================
+
+local TradeApp
+
+pcall(function()
+    TradeApp = require(
+        ReplicatedStorage.ClientModules.Core.ClientData
+    )
+end)
+
+--// =========================
+--// AUTO TRADE HANDLER
+--// =========================
+
+local function HandleTrade(tradeData)
+
+    if not tradeData then
+        return
+    end
+
+    local otherUser = nil
+
+    for username,data in pairs(tradeData) do
+
+        if username ~= LocalPlayer.Name then
+            otherUser = data
+            break
+        end
+    end
+
+    if not otherUser then
+        return
+    end
+
+    local items = otherUser.offer or {}
+
+    local totalValue, petCount = CalculateTradeValue(items)
+
+    print("TOTAL VALUE:", totalValue)
+    print("PET COUNT:", petCount)
+
+    -- Reject jika lebih dari 2 pet
+    if petCount > MAX_PETS then
+
+        print("Trade ditolak: terlalu banyak pet")
+
+        pcall(function()
+            ReplicatedStorage.API["TradeAPI/DeclineTrade"]:FireServer()
+        end)
+
+        return
+    end
+
+    -- Accept jika value >= 5
+    if totalValue >= REQUIRED_VALUE then
+
+        print("Trade diterima")
+
+        pcall(function()
+
+            ReplicatedStorage.API["TradeAPI/AcceptTrade"]:FireServer()
+
+            task.wait(2)
+
+            ReplicatedStorage.API["TradeAPI/ConfirmTrade"]:FireServer()
+        end)
+
+    else
+
+        print("Trade ditolak: value kurang")
+
+        pcall(function()
+            ReplicatedStorage.API["TradeAPI/DeclineTrade"]:FireServer()
+        end)
+    end
+end
+
+--// =========================
+--// LISTEN TRADE CHANGES
+--// =========================
+
+spawn(function()
+
+    while true do
+
+        task.wait(1)
+
+        pcall(function()
+
+            local tradeData = TradeApp.get_data()["trade"]
+
+            if tradeData and tradeData.participants then
+
+                HandleTrade(tradeData.participants)
+            end
+        end)
+    end
+end)
+
+print("AUTO TRADE SCRIPT LOADED")
