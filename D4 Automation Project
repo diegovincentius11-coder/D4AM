@@ -81,7 +81,7 @@ local Toggle = Tab:CreateToggle({
           game:GetService("ReplicatedStorage"):WaitForChild("API"):WaitForChild("HousingAPI/ListHouse"):InvokeServer()
                print("Magic door tidak tedeteksi,memasang magic door...")     
 
-               wait(70)
+               wait(60)
             end
          end)
       else
