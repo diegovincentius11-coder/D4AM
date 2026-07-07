@@ -54,7 +54,7 @@ local Toggle = Tab:CreateToggle({
                _G.AdoptMeTargetName = "Magic House Door"
 _G.AdoptMeTargetUnique = "2_857ba6dd96824623babdca65a30cce68"
       local Players = game:GetService("Players")
-      local ReplicatedStorage = game:GetService("ReplicatedStorage")sssssssssss
+      local ReplicatedStorage = game:GetService("ReplicatedStorage")
       local player = Players.LocalPlayer
 
       local function get_unique(tool)
