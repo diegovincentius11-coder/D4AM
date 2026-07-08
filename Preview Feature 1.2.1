@@ -37,7 +37,7 @@ local Window = Rayfield:CreateWindow({
       Key = {"d4ams"} -- List of keys that the system will accept, can be RAW file links (pastebin, github, etc.) or simple strings ("hello", "key22")
    }
 })
-local Tab = Window:CreateTab("Main Menu", 4483362458) -- Title, Image
+local Tab = Window:CreateTab("Main Menu", "Home") -- Title, Image
 local running = false
 
 local Toggle = Tab:CreateToggle({
@@ -272,5 +272,5 @@ local Toggle = Tab:CreateToggle({
 })
 
 local Tab = Window:CreateTab("Information", "info") -- Title, Image
-local Paragraph = Tab:CreateParagraph({Title = "Script Information", Content = "Version : 0.2"})
-local Paragraph = Tab:CreateParagraph({Title = "Latest Changelog", Content = "Version 0.2 : Added Hop to Crowdest Server Feature,deleted unuseful section and unusable functionns,new Information tab and Changed all of tab icons"})
+local Paragraph = Tab:CreateParagraph({Title = "Script Information", Content = "Version : 0.2.1"})
+local Paragraph = Tab:CreateParagraph({Title = "Latest Changelog", Content = "Version 0.2.1 : Improved Hop to Crowd Server logic"})
