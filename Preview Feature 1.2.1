@@ -1,0 +1,87 @@
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+
+local TARGET_MIN_PLAYERS = 47 -- Change this to your preferred crowd size
+local HOP_DELAY = 1
+
+local player = Players.LocalPlayer
+
+local function getServerPlayerCount(server)
+	if not server then
+		return 0
+	end
+
+	return tonumber(server.playing or server.playerCount or server.players or server.playercount or 0) or 0
+end
+
+local function getBestServerCandidate()
+	local ok, response = pcall(function()
+		return HttpService:GetAsync(string.format(
+			"https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100",
+			game.PlaceId
+		))
+	end)
+
+	if not ok then
+		warn("Could not fetch server list: " .. tostring(response))
+		return nil, 0
+	end
+
+	local success, decoded = pcall(function()
+		return HttpService:JSONDecode(response)
+	end)
+
+	if not success or not decoded or not decoded.data then
+		warn("Received an invalid server list response.")
+		return nil, 0
+	end
+
+	local bestServer = nil
+	local bestCount = 0
+
+	for _, server in ipairs(decoded.data) do
+		if server and server.id ~= game.JobId then
+			local count = getServerPlayerCount(server)
+			if count > bestCount then
+				bestCount = count
+				bestServer = server
+			end
+		end
+	end
+
+	return bestServer, bestCount
+end
+
+local function tryOneHop()
+	if not player then
+		return
+	end
+
+	if Players.NumPlayers >= TARGET_MIN_PLAYERS then
+		print("Already in a crowded server with " .. Players.NumPlayers .. " players.")
+		return
+	end
+
+	print("Current server has only " .. Players.NumPlayers .. " players. Looking for a busier server...")
+	task.wait(HOP_DELAY)
+
+	local bestServer, bestCount = getBestServerCandidate()
+
+	if bestServer and bestServer.id and bestCount >= TARGET_MIN_PLAYERS then
+		print(string.format("Found a server with %d players. Teleporting...", bestCount))
+		TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer.id, player)
+		return
+	end
+
+	if bestServer and bestServer.id then
+		print(string.format("No server met the target threshold. Best available server has %d players. Teleporting anyway...", bestCount))
+		TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer.id, player)
+		return
+	end
+
+	print("Could not fetch a server list. Falling back to a regular hop.")
+	TeleportService:Teleport(game.PlaceId, player)
+end
+
+tryOneHop()
